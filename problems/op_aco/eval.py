@@ -1,7 +1,6 @@
 import os
 import sys
 import numpy as np
-from concurrent.futures import ThreadPoolExecutor
 from aco import run_op_aco
 
 def gen_prizes(coordinates):
@@ -176,15 +175,12 @@ def main(mode="train"):
     N_ANTS = 20
     N_ITER = 100
     
-    # Define problem sizes for each mode
     if mode == "train":
         problem_sizes = [50]
-    elif mode == "val":
-        problem_sizes = [50, 100, 200]
     elif mode == "test":
         problem_sizes = [50, 100, 200, 300, 500]
     else:
-        raise ValueError("Invalid mode. Choose 'train', 'val', or 'test'.")
+        raise ValueError("Invalid mode. Choose 'train' or 'test'.")
     
     # Process all files
     total_obj = 0
@@ -207,6 +203,5 @@ def main(mode="train"):
     print(-total_obj)
 
 if __name__ == "__main__":
-    # Get mode from command line argument
     mode = sys.argv[1] if len(sys.argv) > 1 else "train"
     main(mode)

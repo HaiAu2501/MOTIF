@@ -2,36 +2,19 @@ import numpy as np
 import os
 
 def generate_tsp_datasets():
-    np.random.seed(1234)
     current_dir = os.path.dirname(os.path.abspath(__file__))
-    
     dataset_dir = os.path.join(current_dir, "datasets")
-
     os.makedirs(dataset_dir, exist_ok=True)
-    
-    # Train
-    for size in [100]:
-        n_instances = 5
-        batch = np.random.rand(n_instances, size, 2)
-        filename = os.path.join(dataset_dir, f"train_TSP{size}.npy")
-        np.save(filename, batch)
-        print(f"Generated {n_instances} training instances of size {size}")
 
-    # Validation
-    for size in [20, 50, 100]:
-        n_instances = 64
-        batch = np.random.rand(n_instances, size, 2)
-        filename = os.path.join(dataset_dir, f"val_TSP{size}.npy")
-        np.save(filename, batch)
-        print(f"Generated {n_instances} validation instances of size {size}")
-
-    # Test
-    for size in [50, 100, 200]:
-        n_instances = 64
-        batch = np.random.rand(n_instances, size, 2)
-        filename = os.path.join(dataset_dir, f"test_TSP{size}.npy")
-        np.save(filename, batch)
-        print(f"Generated {n_instances} test instances of size {size}")
+    for mood, seed, sizes, n_instances in [
+        ("train", 1234, [100], 5),
+        ("test", 4567, [50, 100, 200], 64),
+    ]:
+        np.random.seed(seed)
+        for size in sizes:
+            batch = np.random.rand(n_instances, size, 2)
+            np.save(os.path.join(dataset_dir, f"{mood}_TSP{size}.npy"), batch)
+            print(f"Generated {n_instances} {mood} instances of size {size}")
 
 if __name__ == "__main__":
     generate_tsp_datasets()

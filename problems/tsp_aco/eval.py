@@ -9,7 +9,7 @@ def eval_instance(coords, n_ants, n_iter, seed):
     return run_tsp_aco(D, n_ants, n_iter, seed)
 
 def process_file(path, n_ants, n_iter):
-    data = np.load(path)  # shape (n_instances, size, 2)
+    data = np.load(path)
     n_instances = data.shape[0]
     seeds = np.arange(n_instances)
     results = []
@@ -23,13 +23,13 @@ def main(mode):
 
     if mode == "train":
         paths = [os.path.join(current_dir, 'datasets', 'train_TSP50.npy')]
-    elif mode in ("val", "test"):
+    elif mode == "test":
         paths = [
-            os.path.join(current_dir, 'datasets', f'{mode}_TSP{size}.npy')
-            for size in [20, 50, 100]
+            os.path.join(current_dir, 'datasets', f'test_TSP{size}.npy')
+            for size in [20, 50, 100, 200, 300, 500, 1000]
         ]
     else:
-        raise ValueError("Invalid mode. Choose 'train', 'val', or 'test'.")
+        raise ValueError("Invalid mode. Choose 'train' or 'test'.")
 
     if mode == "test":
         N_ANTS = 50

@@ -10,7 +10,6 @@ def generate_tsp_datasets():
     
     splits = {
         "train": ([200], 10),
-        "val": ([20, 50, 100, 200], 64),
         "test": ([20, 50, 100, 200, 500], 64),
     }
 

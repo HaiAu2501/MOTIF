@@ -4,7 +4,6 @@ import numpy as np
 from scipy.spatial import distance_matrix
 from aco import run_cvrp_aco
 
-# Problem constants
 N_ANTS = 30
 N_ITERATIONS = 100
 CAPACITY = 50
@@ -74,25 +73,16 @@ def process_file(path, n_ants, n_iter):
     return np.array(results)
 
 def main(mode="train"):
-    """
-    Main evaluation function.
-    
-    Parameters
-    ----------
-    mode : str
-        Evaluation mode: 'train', 'val', or 'test'.
-    """
     current_dir = os.path.dirname(os.path.abspath(__file__))
-    
-    # Determine file paths
     if mode == "train":
         paths = [os.path.join(current_dir, 'datasets', f'train_CVRP{size}.npy') 
                  for size in [50]]
+    elif mode == "test":
+        paths = [os.path.join(current_dir, 'datasets', f'test_CVRP{size}.npy')
+                 for size in [20, 50, 100, 200, 300, 500]]
     else:
-        paths = [os.path.join(current_dir, 'datasets', f'{mode}_CVRP{size}.npy') 
-                 for size in [20, 50, 100]]
+        raise ValueError("Invalid mode. Choose 'train' or 'test'.")
     
-    # Process all files
     total_cost = 0
     for path in paths:
         if not os.path.exists(path):
@@ -105,6 +95,5 @@ def main(mode="train"):
     print(total_cost)
 
 if __name__ == "__main__":
-    # Get mode from command line argument
     mode = sys.argv[1] if len(sys.argv) > 1 else "train"
     main(mode)

@@ -21,7 +21,6 @@ def generate_cvrp_datasets():
 
     for mood, seed, problem_sizes in [
         ('train', 1234, (50,)),
-        ('val',   3456, (20, 50, 100)),
         ('test',  4567, (20, 50, 100, 200, 300, 500)),
     ]:
         np.random.seed(seed)
