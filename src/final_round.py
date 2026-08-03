@@ -90,6 +90,7 @@ class FinalRound:
         p2_best_improvement = 0.0
         
         attempt_feedback = []
+        reflections = []
         current_player = "P1"
         
         for turn in range(num_iterations):
@@ -109,7 +110,7 @@ class FinalRound:
                     proposal_combination[target_strategy] = player_code
 
                 # Generate new code
-                new_code, summary = FinalOperators.apply(
+                new_code, summary, reflection = FinalOperators.apply(
                     current_combination=proposal_combination,
                     target_strategy=target_strategy,
                     client=self.client,
@@ -119,8 +120,11 @@ class FinalRound:
                     opponent_best_code=opponent_best_code,
                     opponent_best_improvement=opponent_best_improvement,
                     attempt_feedback=attempt_feedback,
-                    task_prompt=self.prompts.get(target_strategy, "")
+                    task_prompt=self.prompts.get(target_strategy, ""),
+                    reflections=reflections
                 )
+                if reflection and reflection not in reflections:
+                    reflections.append(reflection)
                 
                 # Create new combination
                 new_combination = self.global_baseline_combination.copy()
@@ -150,6 +154,7 @@ class FinalRound:
                 attempt_feedback.append({
                     "player": current_player,
                     "status": status,
+                    "improvement": improvement,
                     "summary": summary,
                     "code": new_code
                 })
@@ -172,6 +177,7 @@ class FinalRound:
                         player=current_player,
                         llm_code=new_code,
                         llm_summary=summary,
+                        llm_reflection=reflection,
                         eval_cost=cost if cost != float('inf') else None,
                         eval_improvement=improvement,
                         eval_success=cost != float('inf')

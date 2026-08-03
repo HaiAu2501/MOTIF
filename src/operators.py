@@ -1,3 +1,6 @@
+from src.reflector import ContrastiveReflector
+
+
 class Operators:
     """Three competitive operators for 2-player MCTS: counter, learning, innovation."""
     
@@ -26,6 +29,25 @@ class Operators:
             node, mcts, baseline_cost, current_impl, operator, baseline_impl,
             active_player, task_prompt
         )
+
+        attempts = mcts.get_recent_attempts(1)
+        reflection = ""
+        mcts.latest_reflection = ""
+        if attempts:
+            try:
+                reflection = ContrastiveReflector.reflect(
+                client=client,
+                task_prompt=task_prompt,
+                challenger=attempts[-1],
+                reference_code=mcts.get_winning_code(),
+                reference_improvement=max(0.0, mcts.get_best_improvement()),
+                    prior_reflections=mcts.get_reflections()
+                )
+                mcts.add_reflection(reflection)
+                mcts.latest_reflection = reflection
+                context += f"\n\nCONTRASTIVE REFLECTION:\n{reflection}"
+            except Exception as e:
+                print(f"[REFLECTION WARNING] {e}")
         
         messages = [
             {"role": "system", "content": system_prompt},
@@ -103,6 +125,11 @@ Avoid repeating failed or non-improving formula families."""
 {last['code']}
 ```
 Compare its concrete formula with the better baseline/opponent before proposing the next code."""
+
+        reflections = mcts.get_reflections(3)
+        reflection_text = "\n".join(f"- {x}" for x in reflections) if reflections else "- No reflection yet"
+        reflection_section = f"""ACCUMULATED DESIGN INSIGHTS:
+{reflection_text}"""
         
         instructions = Operators._get_operator_instructions(operator_type)
         
@@ -115,7 +142,7 @@ Create an implementation that beats both baseline cost ({baseline_cost:.6f}) and
 Change one decision rule at a time; when feedback is negative, return to the baseline or best positive idea.
 Keep reasoning concise (50 words max)."""
         
-        return f"{task_section}\n\n{baseline_section}\n\n{current_section}\n\n{opponent_section}\n\n{history_section}\n\n{feedback_section}\n\n{contrast_section}\n\n{instructions_section}"
+        return f"{task_section}\n\n{baseline_section}\n\n{current_section}\n\n{opponent_section}\n\n{history_section}\n\n{feedback_section}\n\n{contrast_section}\n\n{reflection_section}\n\n{instructions_section}"
     
     @staticmethod
     def _get_operator_instructions(operator_type):

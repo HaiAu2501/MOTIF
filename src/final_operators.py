@@ -1,3 +1,6 @@
+from src.reflector import ContrastiveReflector
+
+
 class FinalOperators:
     """Operators for Final Round sequential optimization."""
     
@@ -5,7 +8,7 @@ class FinalOperators:
     def apply(current_combination: dict, target_strategy: str, client, 
               baseline_combination: dict, baseline_cost: float, player: str,
               opponent_best_code: str = None, opponent_best_improvement: float = 0.0,
-              attempt_feedback: list = None, task_prompt: str = ""):
+              attempt_feedback: list = None, task_prompt: str = "", reflections: list = None):
         """Apply optimization to target strategy with full system context."""
         system_prompt = FinalOperators._get_system_prompt(
             baseline_combination, baseline_cost, target_strategy
@@ -13,8 +16,32 @@ class FinalOperators:
         
         context = FinalOperators._build_context(
             current_combination, baseline_combination, target_strategy, baseline_cost, player,
-            opponent_best_code, opponent_best_improvement, attempt_feedback, task_prompt
+            opponent_best_code, opponent_best_improvement, attempt_feedback, task_prompt, reflections
         )
+
+        reflection = ""
+        if attempt_feedback:
+            last = attempt_feedback[-1]
+            challenger = {
+                "code": last["code"],
+                "improvement": last.get("improvement", -100.0)
+            }
+            try:
+                reflection = ContrastiveReflector.reflect(
+                    client=client,
+                    task_prompt=task_prompt,
+                    challenger=challenger,
+                    reference_code=(
+                        opponent_best_code
+                        if opponent_best_code and opponent_best_improvement > 0
+                        else baseline_combination[target_strategy]
+                    ),
+                    reference_improvement=max(0.0, opponent_best_improvement),
+                    prior_reflections=reflections
+                )
+                context += f"\n\nCONTRASTIVE REFLECTION:\n{reflection}"
+            except Exception as e:
+                print(f"[REFLECTION WARNING] {e}")
         
         messages = [
             {"role": "system", "content": system_prompt},
@@ -22,7 +49,7 @@ class FinalOperators:
         ]
         
         _, code, summary = client.get_code(messages, function_id=f"FINAL_{target_strategy}")
-        return code, summary
+        return code, summary, reflection
     
     @staticmethod
     def _get_system_prompt(baseline_combination: dict, baseline_cost: float, target_strategy: str):
@@ -56,7 +83,7 @@ RULES:
     @staticmethod
     def _build_context(current_combination: dict, baseline_combination: dict, target_strategy: str,
                        baseline_cost: float, player: str, opponent_best_code: str, opponent_best_improvement: float,
-                       attempt_feedback: list, task_prompt: str):
+                       attempt_feedback: list, task_prompt: str, reflections: list = None):
         # Current system state
         baseline_section = FinalOperators._build_baseline_section(
             baseline_combination, baseline_cost, target_strategy
@@ -113,6 +140,10 @@ CURRENT IMPLEMENTATION:
 {last['code']}
 ```
 Compare its concrete formula with the better incumbent/opponent before proposing the next code."""
+
+        reflection_text = "\n".join(f"- {x}" for x in (reflections or [])[-3:]) or "- No reflection yet"
+        reflection_section = f"""ACCUMULATED DESIGN INSIGHTS:
+{reflection_text}"""
         
         # Instructions
         instructions = f"""---
@@ -129,4 +160,4 @@ FOCUS:
 
 Return an improved implementation only for {target_strategy}."""
         
-        return f"{task_prompt}\n\n{baseline_section}\n\n{system_section}\n\n{target_section}\n\n{opponent_section}\n\n{history_section}\n\n{contrast_section}\n\n{instructions}"
+        return f"{task_prompt}\n\n{baseline_section}\n\n{system_section}\n\n{target_section}\n\n{opponent_section}\n\n{history_section}\n\n{contrast_section}\n\n{reflection_section}\n\n{instructions}"

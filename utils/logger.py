@@ -55,6 +55,7 @@ class CompetitiveLogger:
                         player: str, operator: str, llm_code: str,
                         llm_summary: str, eval_cost: Optional[float],
                         eval_improvement: float, eval_success: bool,
+                        llm_reflection: str = "",
                         baseline_updated: bool = False,
                         new_baseline: Optional[float] = None):
         turn_data = {
@@ -66,6 +67,7 @@ class CompetitiveLogger:
             "operator": operator,
             "llm_code": llm_code,
             "llm_summary": llm_summary,
+            "llm_reflection": llm_reflection,
             "eval_cost": eval_cost,
             "eval_improvement": eval_improvement,
             "eval_success": eval_success,
@@ -82,7 +84,8 @@ class CompetitiveLogger:
     def log_round2_turn(self, strategy: str, strategy_baseline: float,
                         turn: int, player: str, llm_code: str,
                         llm_summary: str, eval_cost: Optional[float],
-                        eval_improvement: float, eval_success: bool):
+                        eval_improvement: float, eval_success: bool,
+                        llm_reflection: str = ""):
         turn_data = {
             "strategy": strategy,
             "strategy_baseline": strategy_baseline,
@@ -90,6 +93,7 @@ class CompetitiveLogger:
             "player": player,
             "llm_code": llm_code,
             "llm_summary": llm_summary,
+            "llm_reflection": llm_reflection,
             "eval_cost": eval_cost,
             "eval_improvement": eval_improvement,
             "eval_success": eval_success

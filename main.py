@@ -1,5 +1,6 @@
 import os
 import sys
+import atexit
 import hydra
 import importlib.util
 from omegaconf import DictConfig
@@ -12,6 +13,20 @@ from src.controller import Controller
 from src.final_round import FinalRound
 
 load_dotenv()
+
+
+def snapshot_strategy_sources(solver_config):
+    snapshot = {}
+    for strategy in solver_config.functions:
+        with open(strategy.path, 'r', encoding='utf-8') as f:
+            snapshot[strategy.path] = f.read()
+    return snapshot
+
+
+def restore_strategy_sources(snapshot):
+    for path, code in snapshot.items():
+        with open(path, 'w', encoding='utf-8') as f:
+            f.write(code)
 
 
 def load_prompts(solver_path):
@@ -127,6 +142,9 @@ def main(cfg: DictConfig):
     2. Final Round: Sequential system-aware optimization
     """
     solver_config = normalize_solver_config(cfg.solver)
+    source_snapshot = snapshot_strategy_sources(solver_config)
+    restore_on_exit = lambda: restore_strategy_sources(source_snapshot)
+    atexit.register(restore_on_exit)
     problem_name = solver_config.problem
     algorithm_name = solver_config.algorithm
     final_iterations = cfg.mcts.final_iterations
@@ -225,15 +243,21 @@ def main(cfg: DictConfig):
     print("TWO-PHASE OPTIMIZATION COMPLETED")
     print("=" * 60)
     
-    total_improvement = final_results['total_improvement']
+    final_round_improvement = final_results['total_improvement']
+    overall_improvement = (
+        (initial_baseline - final_results['best_cost']) / abs(initial_baseline) * 100
+    )
     
     print("Phase Summary:")
     print(f"  Round 1: {round1_improvement:.2f}% improvement")
-    print(f"  Final Round: {total_improvement:.2f}% total improvement")
+    print(f"  Final Round: {final_round_improvement:.2f}% additional improvement")
+    print(f"  Overall: {overall_improvement:.2f}% improvement")
     print(f"  Results saved to: {cfg.paths.results_dir}")
     print("  Log files:")
     print(f"    Round 1: {logger.get_round1_file_path()}")
     print(f"    Final Round: {logger.get_round2_file_path()}")
+    restore_strategy_sources(source_snapshot)
+    atexit.unregister(restore_on_exit)
     print("\nOptimization completed successfully!")
 
 

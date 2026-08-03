@@ -57,7 +57,9 @@ class CompetitiveMCTS:
         
         # For logging
         self.latest_generated_code = ""
+        self.latest_reflection = ""
         self.recent_attempts = []
+        self.reflection_memory = []
         
         # Q-value parameters
         self.lambda_factor = 0.7
@@ -104,6 +106,7 @@ class CompetitiveMCTS:
             "operator": operator,
             "summary": child.summary,
             "code": self.latest_generated_code,
+            "reflection": self.latest_reflection,
             "cost": child.get_cost(expanding_player)
         }
     
@@ -424,6 +427,13 @@ class CompetitiveMCTS:
 
     def get_recent_attempts(self, limit: int = 4) -> list:
         return self.recent_attempts[-limit:]
+
+    def get_reflections(self, limit: int = 3) -> list:
+        return self.reflection_memory[-limit:]
+
+    def add_reflection(self, reflection: str) -> None:
+        if reflection and reflection not in self.reflection_memory:
+            self.reflection_memory.append(reflection)
     
     def get_winning_code(self) -> str:
         if self.p1_best_cost <= self.p2_best_cost:

@@ -170,6 +170,7 @@ class Controller:
                         operator=result['operator'],
                         llm_code=result.get('code', ''),
                         llm_summary=result['summary'],
+                        llm_reflection=result.get('reflection', ''),
                         eval_cost=eval_cost if eval_success else None,
                         eval_improvement=improvement,
                         eval_success=eval_success

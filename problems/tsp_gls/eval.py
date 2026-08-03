@@ -29,7 +29,9 @@ def solve_instance(coordinates: np.ndarray, perturbation_moves: int, iter_limit:
     np.random.seed(seed)
     
     # Create distance matrix from coordinates
+    # Match the ReEvo/MCTS-AHD GLS protocol: keep a small positive diagonal.
     dist_matrix = distance_matrix(coordinates, coordinates)
+    dist_matrix += np.eye(len(coordinates)) * 1e-5
     
     # Solve using GLS
     best_cost = run_tsp_gls(
@@ -61,6 +63,11 @@ def process_file(path: str, perturbation_moves: int, iter_limit: int) -> np.ndar
     """
     # Load dataset: shape (n_instances, n_cities, 2)
     data = np.load(path)
+    return process_data(data, perturbation_moves, iter_limit)
+
+
+def process_data(data: np.ndarray, perturbation_moves: int, iter_limit: int) -> np.ndarray:
+    """Evaluate an in-memory batch of coordinate instances."""
     n_instances = data.shape[0]
     
     # Generate seeds for reproducibility
@@ -88,7 +95,7 @@ def main(mode: str = "train"):
     
     # Algorithm parameters
     PERTURBATION_MOVES = 30
-    ITER_LIMIT = 1000
+    ITER_LIMIT = 1200
 
     # Determine dataset paths based on mode
     if mode == "train":
@@ -107,7 +114,7 @@ def main(mode: str = "train"):
         raise ValueError("Invalid mode. Choose 'train', 'val', or 'test'.")
     
     # Process all dataset files
-    total_cost = 0.0
+    all_costs = []
     
     for path in paths:
         # Check if dataset file exists
@@ -118,11 +125,10 @@ def main(mode: str = "train"):
         # Process dataset
         costs = process_file(path, PERTURBATION_MOVES, ITER_LIMIT)
         
-        # Add to total cost
-        total_cost += costs.sum()
+        all_costs.extend(costs.tolist())
     
     # Print total cost (main metric)
-    print(total_cost)
+    print(float(np.mean(all_costs)) if all_costs else float('inf'))
 
 if __name__ == "__main__":
     # Get mode from command line argument
