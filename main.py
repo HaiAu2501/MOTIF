@@ -206,6 +206,7 @@ def main(cfg: DictConfig):
         problem_config=solver_config,
         client=client,
         macro_baseline=round1_baseline,
+        prompts=prompts,
         logger=logger
     )
     

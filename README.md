@@ -26,6 +26,11 @@
 
 ---
 
+> [!CAUTION]
+> We discovered that some recent commits unintentionally changed the MOTIF algorithm in an uncontrolled way compared with the original paper, which has caused performance issues. We are working to fix this quickly and restore the best version of MOTIF. Thank you to the community for bringing this to our attention, and we apologize for the inconvenience.
+
+---
+
 ## 🔍 2. Overview
 
 **MOTIF** is a turn-based, multi-agent framework for improving combinatorial optimization solvers by jointly evolving multiple algorithmic strategies rather than tuning a single heuristic.

@@ -31,7 +31,7 @@ def edge_score(i: int, j: int, distances: np.ndarray) -> float:
 - `distances`: pairwise city distances.
 - `return`: edge desirability score; higher is better.
 
-HINT: Use distance and local neighborhood information to score promising construction edges.
+HINT: Try edge-score formulas using inverse distance, nearest-neighbor rank, local density, and simple geometric alternatives. Higher scores should favor edges that can seed short tours without greedily choosing only the nearest city.
 
 {RULES}
 """
@@ -51,7 +51,7 @@ def city_badness(tour_idx: int, tour: list[int], distances: np.ndarray) -> float
 - `distances`: pairwise city distances.
 - `return`: removal badness; higher is removed earlier.
 
-HINT: Score cities that create expensive adjacent edges or poor local geometry as worse.
+HINT: Try badness formulas based on adjacent edge cost, removal savings, local detour, neighborhood outliers, or angle-like structure. Higher scores should identify cities whose removal is most likely to create an easier repair opportunity.
 
 {RULES}
 """
@@ -71,7 +71,7 @@ def insert_position(city: int, incomplete_tour: list[int], distances: np.ndarray
 - `distances`: pairwise city distances.
 - `return`: insertion index.
 
-HINT: Choose the position with low added tour length while preserving useful geometric structure.
+HINT: Try insertion formulas using added length, neighboring edge quality, local density, and regret between the best and second-best positions. Return the position that repairs cheaply while avoiding myopic insertions that hurt later structure.
 
 {RULES}
 """

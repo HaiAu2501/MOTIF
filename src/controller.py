@@ -158,7 +158,7 @@ class Controller:
                 
                 if self.logger:
                     player = result['player']
-                    eval_cost = mcts.p1_best_cost if player == 'P1' else mcts.p2_best_cost
+                    eval_cost = result.get('cost')
                     eval_success = eval_cost is not None and eval_cost != float('inf')
                     
                     self.logger.log_round1_turn(

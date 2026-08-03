@@ -27,9 +27,9 @@ def generate_guide_matrix(distance_matrix: np.ndarray) -> np.ndarray:
     pass
 ```
 - `distance_matrix`: pairwise city distances.
-- `return`: guide values for penalizing weak edges.
+- `return`: finite nonnegative guide matrix; larger values are penalized first.
 
-HINT: Combine distance, nearest-neighbor structure, and edge criticality to guide penalty selection.
+HINT: Only relative guide order selects which tour edge is penalized. Design prior indicators of how bad it is to keep each edge; larger means worse. Return a finite matrix with the same shape.
 
 {RULES}
 """

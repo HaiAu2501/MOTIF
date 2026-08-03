@@ -30,7 +30,7 @@ def initialize(distances: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
 - `heuristic`: returned prior indicators of promising edges.
 - `pheromone`: returned initial search memory over edges.
 
-HINT: Try combining various factors to determine how promising it is to select an edge.
+HINT: Try several edge-score formulas that mix inverse distance, neighborhood rank, local density, and global distance scale. The heuristic should separate edges likely to appear in short tours, while pheromone should start smooth enough for exploration.
 
 {RULES}
 """
@@ -56,7 +56,7 @@ def compute_probabilities(
 - `n_iterations`: total search iterations.
 - `return`: unnormalized transition weights.
 
-HINT: Balance pheromone intensity and edge desirability; adapt their influence over time if useful.
+HINT: Try power, log, rank, or temperature-style formulas that combine pheromone and heuristic differently across iterations. The weights should amplify promising edges without collapsing exploration too early.
 
 {RULES}
 """
@@ -84,7 +84,7 @@ def update_pheromone(
 - `n_iterations`: total search iterations.
 - `return`: updated pheromone matrix.
 
-HINT: Evaporate old trails and reinforce edges from shorter tours while keeping values stable.
+HINT: Try deposit formulas based on tour cost rank, elite tours, relative cost gaps, or repeated edge usage, with evaporation that changes over time. Reinforce useful edges strongly enough to guide search but clip or smooth values to avoid saturation.
 
 {RULES}
 """

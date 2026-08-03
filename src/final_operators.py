@@ -5,7 +5,7 @@ class FinalOperators:
     def apply(current_combination: dict, target_strategy: str, client, 
               baseline_combination: dict, baseline_cost: float, player: str,
               opponent_best_code: str = None, opponent_best_improvement: float = 0.0,
-              successful_summaries: list = None):
+              attempt_feedback: list = None, task_prompt: str = ""):
         """Apply optimization to target strategy with full system context."""
         system_prompt = FinalOperators._get_system_prompt(
             baseline_combination, baseline_cost, target_strategy
@@ -13,7 +13,7 @@ class FinalOperators:
         
         context = FinalOperators._build_context(
             current_combination, baseline_combination, target_strategy, baseline_cost, player,
-            opponent_best_code, opponent_best_improvement, successful_summaries
+            opponent_best_code, opponent_best_improvement, attempt_feedback, task_prompt
         )
         
         messages = [
@@ -56,7 +56,7 @@ RULES:
     @staticmethod
     def _build_context(current_combination: dict, baseline_combination: dict, target_strategy: str,
                        baseline_cost: float, player: str, opponent_best_code: str, opponent_best_improvement: float,
-                       successful_summaries: list):
+                       attempt_feedback: list, task_prompt: str):
         # Current system state
         baseline_section = FinalOperators._build_baseline_section(
             baseline_combination, baseline_cost, target_strategy
@@ -93,26 +93,40 @@ CURRENT IMPLEMENTATION:
             opponent_section = f"""OPPONENT BEST FOR {target_strategy}:
 - No opponent result yet."""
         
-        # History of successful moves
-        if successful_summaries:
-            history_text = "\n".join(f"- {s}" for s in successful_summaries[-3:])
+        if attempt_feedback:
+            history_text = "\n".join(
+                f"- {a['player']}: {a['status']} — {a['summary']}"
+                for a in attempt_feedback[-4:]
+            )
         else:
-            history_text = "- No successful moves yet"
+            history_text = "- No evaluated attempts yet"
         
-        history_section = f"""RECENT SUCCESSFUL MOVES FOR {target_strategy}:
+        history_section = f"""RECENT EVALUATOR FEEDBACK FOR {target_strategy}:
 {history_text}
 """
+
+        contrast_section = ""
+        if attempt_feedback:
+            last = attempt_feedback[-1]
+            contrast_section = f"""LAST CHALLENGER ({last['status']}):
+```python
+{last['code']}
+```
+Compare its concrete formula with the better incumbent/opponent before proposing the next code."""
         
         # Instructions
         instructions = f"""---
 INSTRUCTION:
-You are {player}. Optimize {target_strategy} to beat baseline cost {baseline_cost:.6f} and the opponent.
+You are {player}. Improve only {target_strategy} while keeping the other strategies compatible.
+Design a compact heuristic formula that can beat baseline cost {baseline_cost:.6f} and the opponent.
+Use the current system to infer which signals are already covered, then add or rebalance a missing signal.
+Change one decision rule at a time and do not build on negative attempts.
 
 FOCUS:
-- Hyperparameter tuning
-- Formula variants
-- System-level synergies with other strategies
+- Try alternative formula families, normalizations, rankings, or iteration schedules.
+- Combine complementary graph, item, route, solution-quality, or pheromone signals.
+- Preserve numerical stability and avoid rewriting the surrounding algorithm.
 
 Return an improved implementation only for {target_strategy}."""
         
-        return f"{baseline_section}\n\n{system_section}\n\n{target_section}\n\n{opponent_section}\n\n{history_section}\n\n{instructions}"
+        return f"{task_prompt}\n\n{baseline_section}\n\n{system_section}\n\n{target_section}\n\n{opponent_section}\n\n{history_section}\n\n{contrast_section}\n\n{instructions}"

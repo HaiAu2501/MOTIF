@@ -47,7 +47,7 @@ class CompetitiveMCTS:
         # Iteration counter (for logging only, not for tree logic)
         self.turn_count = 0
         
-        # Best tracking per player (best-latest: update if cost <= current best)
+        # Best tracking per player: only genuine improvements replace incumbents.
         self.p1_best_cost = baseline_cost
         self.p2_best_cost = baseline_cost
         self.p1_best_code = initial_code
@@ -57,6 +57,7 @@ class CompetitiveMCTS:
         
         # For logging
         self.latest_generated_code = ""
+        self.recent_attempts = []
         
         # Q-value parameters
         self.lambda_factor = 0.7
@@ -102,7 +103,8 @@ class CompetitiveMCTS:
             "improvement": improvement,
             "operator": operator,
             "summary": child.summary,
-            "code": self.latest_generated_code
+            "code": self.latest_generated_code,
+            "cost": child.get_cost(expanding_player)
         }
     
     def _select(self):
@@ -247,6 +249,15 @@ class CompetitiveMCTS:
             child.set_cost(expanding_player, new_cost)
             improvement = (self.baseline_cost - new_cost) / abs(self.baseline_cost) * 100
             child.set_improvement(expanding_player, improvement)
+
+        self.recent_attempts.append({
+            "player": expanding_player,
+            "operator": child.operator,
+            "summary": child.summary,
+            "code": child.get_code(expanding_player),
+            "improvement": child.get_improvement(expanding_player),
+            "success": new_cost is not None and new_cost != float('inf')
+        })
         
         # Opponent's values inherited from parent
         if child.parent:
@@ -343,12 +354,12 @@ class CompetitiveMCTS:
             return 0.0
         
         if expanding_player == "P1":
-            if cost <= self.p1_best_cost:
+            if cost < self.p1_best_cost:
                 self.p1_best_cost = cost
                 self.p1_best_code = child.p1_code
                 self.p1_best_improvement = improvement
         else:
-            if cost <= self.p2_best_cost:
+            if cost < self.p2_best_cost:
                 self.p2_best_cost = cost
                 self.p2_best_code = child.p2_code
                 self.p2_best_improvement = improvement
@@ -410,6 +421,9 @@ class CompetitiveMCTS:
     
     def get_best_improvement(self) -> float:
         return max(self.p1_best_improvement, self.p2_best_improvement)
+
+    def get_recent_attempts(self, limit: int = 4) -> list:
+        return self.recent_attempts[-limit:]
     
     def get_winning_code(self) -> str:
         if self.p1_best_cost <= self.p2_best_cost:

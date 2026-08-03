@@ -34,7 +34,7 @@ def edge_score(i: int, j: int, distances: np.ndarray, demands: np.ndarray, capac
 - `capacity`: vehicle capacity.
 - `return`: edge desirability score; higher is better.
 
-HINT: Score edges by distance, demand compatibility, depot/customer role, and capacity pressure.
+HINT: Try edge-score formulas using distance, demand compatibility, depot role, customer clustering, and capacity pressure. Higher scores should favor transitions that can build compact feasible routes, not only short edges.
 
 {RULES}
 """
@@ -57,7 +57,7 @@ def customer_badness(customer_idx: int, permutation: list[int], distances: np.nd
 - `capacity`: vehicle capacity.
 - `return`: removal badness; higher is removed earlier.
 
-HINT: Score customers with high routing disruption or demand difficulty as removal candidates.
+HINT: Try badness formulas using adjacent route cost, removal savings, demand size, depot distance, cluster outlierness, and capacity stress. Higher scores should remove customers that create expensive or hard-to-repair route structure.
 
 {RULES}
 """
@@ -80,7 +80,7 @@ def insert_position(customer: int, permutation: list[int], distances: np.ndarray
 - `capacity`: vehicle capacity.
 - `return`: insertion index.
 
-HINT: Insert where incremental routing cost and capacity pressure are lowest.
+HINT: Try insertion formulas using added travel cost, demand compatibility, depot proximity, route-boundary effects, and regret between candidate positions. Return the index that repairs route quality while keeping capacity pressure manageable.
 
 {RULES}
 """

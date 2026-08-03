@@ -11,11 +11,12 @@ class FinalRound:
     """
     
     def __init__(self, initial_combination: dict, problem_config, client, 
-                 macro_baseline: float, logger=None):
+                 macro_baseline: float, prompts=None, logger=None):
         self.problem_config = problem_config
         self.client = client
         self.macro_baseline = macro_baseline
         self.logger = logger
+        self.prompts = prompts or {}
         
         self.strategy_ids = list(initial_combination.keys())
         
@@ -80,14 +81,15 @@ class FinalRound:
         print(f"  Strategy baseline: {self.strategy_baseline_cost:.6f}")
         
         # Track player results
-        p1_best_cost = float('inf')
-        p1_best_code = None
-        p1_best_improvement = -100.0
-        p2_best_cost = float('inf')
-        p2_best_code = None
-        p2_best_improvement = -100.0
+        baseline_code = self.strategy_baseline_combination[target_strategy]
+        p1_best_cost = self.strategy_baseline_cost
+        p1_best_code = baseline_code
+        p1_best_improvement = 0.0
+        p2_best_cost = self.strategy_baseline_cost
+        p2_best_code = baseline_code
+        p2_best_improvement = 0.0
         
-        successful_summaries = []
+        attempt_feedback = []
         current_player = "P1"
         
         for turn in range(num_iterations):
@@ -100,9 +102,15 @@ class FinalRound:
                     opponent_best_code = p1_best_code
                     opponent_best_improvement = p1_best_improvement
                 
+                # Each player refines its own incumbent while seeing the opponent's best.
+                player_code = p1_best_code if current_player == "P1" else p2_best_code
+                proposal_combination = self.global_baseline_combination.copy()
+                if player_code is not None:
+                    proposal_combination[target_strategy] = player_code
+
                 # Generate new code
                 new_code, summary = FinalOperators.apply(
-                    current_combination=self.global_baseline_combination,
+                    current_combination=proposal_combination,
                     target_strategy=target_strategy,
                     client=self.client,
                     baseline_combination=self.strategy_baseline_combination,
@@ -110,7 +118,8 @@ class FinalRound:
                     player=current_player,
                     opponent_best_code=opponent_best_code,
                     opponent_best_improvement=opponent_best_improvement,
-                    successful_summaries=successful_summaries
+                    attempt_feedback=attempt_feedback,
+                    task_prompt=self.prompts.get(target_strategy, "")
                 )
                 
                 # Create new combination
@@ -127,19 +136,23 @@ class FinalRound:
                 
                 # Update player's best
                 if current_player == "P1":
-                    if cost <= p1_best_cost:
+                    if cost < p1_best_cost:
                         p1_best_cost = cost
                         p1_best_code = new_code
                         p1_best_improvement = improvement
                 else:
-                    if cost <= p2_best_cost:
+                    if cost < p2_best_cost:
                         p2_best_cost = cost
                         p2_best_code = new_code
                         p2_best_improvement = improvement
                 
-                # Track successful moves
-                if improvement > 0:
-                    successful_summaries.append(f"{current_player}: {summary}")
+                status = f"{improvement:+.2f}%" if cost != float('inf') else "invalid"
+                attempt_feedback.append({
+                    "player": current_player,
+                    "status": status,
+                    "summary": summary,
+                    "code": new_code
+                })
                 
                 # Update global best if improved
                 if cost < self.best_cost:

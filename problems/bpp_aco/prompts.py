@@ -31,7 +31,7 @@ def initialize(demands: np.ndarray, capacity: int) -> tuple[np.ndarray, np.ndarr
 - `heuristic`: returned item-pair compatibility prior.
 - `pheromone`: returned initial search memory over item pairs.
 
-HINT: Combine item sizes, complementarity, and capacity utilization to score promising item pairings.
+HINT: Try pair-score formulas using size complementarity, residual capacity fit, large-small balance, and near-full-bin utilization. The heuristic should make item pairs that pack tightly more attractive, while pheromone starts smooth enough to explore alternatives.
 
 {RULES}
 """
@@ -53,7 +53,7 @@ def update_pheromone(pheromone: np.ndarray, paths: list, fitnesses: np.ndarray, 
 - `n_iterations`: total search iterations.
 - `return`: updated pheromone matrix.
 
-HINT: Reward item groupings from high-utilization packings while evaporating stale trails.
+HINT: Try pheromone deposits based on bin utilization, pair co-occurrence in good packings, fitness rank, or residual-waste reduction. Reinforce stable item groupings without saturating the matrix or destroying exploration.
 
 {RULES}
 """

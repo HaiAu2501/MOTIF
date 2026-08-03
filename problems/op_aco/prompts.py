@@ -33,7 +33,7 @@ def initialize(prize: np.ndarray, distance: np.ndarray, maxlen: float) -> tuple[
 - `heuristic`: returned transition desirability prior.
 - `pheromone`: returned initial search memory.
 
-HINT: Combine prize, travel distance, depot relation, and remaining budget pressure to score transitions.
+HINT: Try transition formulas combining prize, travel cost, depot distance, remaining-budget pressure, and prize density around the destination. The heuristic should favor nodes that collect value without consuming too much tour length, while pheromone stays exploratory.
 
 {RULES}
 """
@@ -55,7 +55,7 @@ def update_pheromone(pheromone: np.ndarray, sols: list, objs: np.ndarray, it: in
 - `n_iterations`: total search iterations.
 - `return`: updated pheromone matrix.
 
-HINT: Reinforce high-prize node sequences while preserving enough evaporation for exploration.
+HINT: Try deposit formulas based on collected-prize rank, path feasibility, prize-per-distance efficiency, repeated arcs, or elite tours. Reinforce valuable feasible sequences while clipping or smoothing pheromone so exploration does not collapse.
 
 {RULES}
 """

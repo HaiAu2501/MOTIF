@@ -31,7 +31,7 @@ def initialize(prize: np.ndarray, weight: np.ndarray) -> tuple[np.ndarray, np.nd
 - `heuristic`: returned item desirability prior.
 - `pheromone`: returned initial item memory.
 
-HINT: Combine prize, total weight burden, and bottleneck constraints to estimate item desirability.
+HINT: Try item-score formulas combining prize, normalized resource use, bottleneck scarcity, dominance, and prize-to-burden ratios. The heuristic should prefer high-value items that leave scarce capacities flexible, while pheromone should not overcommit initially.
 
 {RULES}
 """
@@ -57,7 +57,7 @@ def compute_probabilities(
 - `n_iterations`: total search iterations.
 - `return`: unnormalized item-selection weights.
 
-HINT: Balance pheromone and heuristic signals while keeping the dummy node and feasibility masks usable.
+HINT: Try power, rank, temperature, or iteration-scheduled formulas that combine pheromone memory with item desirability. Keep dummy and infeasible entries numerically valid while making high-value feasible items stand out.
 
 {RULES}
 """
@@ -79,7 +79,7 @@ def update_pheromone(pheromone: np.ndarray, sols: np.ndarray, objs: np.ndarray, 
 - `n_iterations`: total search iterations.
 - `return`: updated item pheromone vector.
 
-HINT: Reinforce items from high-prize feasible solutions and evaporate old trails conservatively.
+HINT: Try deposit formulas based on objective rank, normalized prize gaps, selected-item frequency, or elite feasible solutions. Evaporate conservatively so good item sets persist, but clip or smooth pheromone to avoid locking onto one pattern.
 
 {RULES}
 """

@@ -77,9 +77,32 @@ IMPLEMENTATION:
         path_summaries = node.get_path_summaries(max_depth=3)
         history_text = "\n".join(f"- {s}" for s in path_summaries) if path_summaries else "- No moves yet"
         
-        history_section = f"""RECENT SUCCESSFUL CHANGES:
+        history_section = f"""CURRENT SEARCH PATH:
 {history_text}
 """
+
+        attempts = mcts.get_recent_attempts(4)
+        if attempts:
+            attempt_text = "\n".join(
+                f"- {a['player']} {a['operator']}: {a['improvement']:+.2f}% — {a['summary']}"
+                if a["success"] else f"- {a['player']} {a['operator']}: invalid — {a['summary']}"
+                for a in attempts
+            )
+        else:
+            attempt_text = "- No evaluated attempts yet"
+        feedback_section = f"""RECENT EVALUATOR FEEDBACK:
+{attempt_text}
+Avoid repeating failed or non-improving formula families."""
+
+        contrast_section = ""
+        if attempts:
+            last = attempts[-1]
+            last_status = f"{last['improvement']:+.2f}%" if last["success"] else "invalid"
+            contrast_section = f"""LAST CHALLENGER ({last_status}):
+```python
+{last['code']}
+```
+Compare its concrete formula with the better baseline/opponent before proposing the next code."""
         
         instructions = Operators._get_operator_instructions(operator_type)
         
@@ -89,19 +112,23 @@ INSTRUCTION:
 
 GOAL:
 Create an implementation that beats both baseline cost ({baseline_cost:.6f}) and the opponent.
+Change one decision rule at a time; when feedback is negative, return to the baseline or best positive idea.
 Keep reasoning concise (50 words max)."""
         
-        return f"{task_section}\n\n{baseline_section}\n\n{current_section}\n\n{opponent_section}\n\n{history_section}\n\n{instructions_section}"
+        return f"{task_section}\n\n{baseline_section}\n\n{current_section}\n\n{opponent_section}\n\n{history_section}\n\n{feedback_section}\n\n{contrast_section}\n\n{instructions_section}"
     
     @staticmethod
     def _get_operator_instructions(operator_type):
         if operator_type == "counter":
-            return "Counter: identify a weakness in the opponent implementation and improve on it."
+            return "Counter: target one weakness in the opponent or its evaluator score with a distinct stable formula."
         
         elif operator_type == "learning":
-            return "Learning: reuse the opponent's best useful idea and combine it with a stronger variant."
+            return "Learning: retain one useful opponent pattern, then change or combine it using evaluator feedback."
         
         elif operator_type == "innovation":
-            return "Innovation: try a different heuristic idea from both baseline and opponent."
+            return "Innovation: try a compact formula family not used by the baseline, opponent, or recent attempts."
         
-        return "Optimize the implementation to outperform opponent."
+        return (
+            "Optimize the implementation with a concrete heuristic formula that preserves the exact "
+            "signature, uses only available inputs, and improves the evaluator cost."
+        )

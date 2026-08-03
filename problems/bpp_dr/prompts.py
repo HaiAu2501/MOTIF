@@ -32,7 +32,7 @@ def item_compatibility(i: int, j: int, demands: np.ndarray, capacity: int) -> fl
 - `capacity`: bin capacity.
 - `return`: item compatibility score; higher is better.
 
-HINT: Score item pairs by size complementarity and expected capacity utilization.
+HINT: Try compatibility formulas using size complementarity, near-capacity fit, large-small pairing, and residual waste. Higher scores should place items together when their sizes help form dense bins rather than merely being similar.
 
 {RULES}
 """
@@ -53,7 +53,7 @@ def item_badness(item_idx: int, permutation: list[int], demands: np.ndarray, cap
 - `capacity`: bin capacity.
 - `return`: removal badness; higher is removed earlier.
 
-HINT: Score items that make bins hard to fill or disturb local size structure as worse.
+HINT: Try badness formulas using item size, local pair compatibility, expected residual waste, and disruption to nearby items. Higher scores should select items whose removal creates more repair freedom or fixes poor bin structure.
 
 {RULES}
 """
@@ -74,7 +74,7 @@ def insert_position(item: int, permutation: list[int], demands: np.ndarray, capa
 - `capacity`: bin capacity.
 - `return`: insertion index.
 
-HINT: Insert where local size compatibility and bin utilization are likely to improve most.
+HINT: Try insertion formulas using local compatibility, residual-capacity fit, waste reduction, and regret between candidate positions. Return the index that makes the ordering more likely to form full bins after greedy packing.
 
 {RULES}
 """
