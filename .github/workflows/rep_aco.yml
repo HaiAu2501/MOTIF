@@ -1,0 +1,217 @@
+name: rep_aco
+
+# Reproduce the ACO results: train each problem's strategies, then test the discovered
+# heuristics on every instance size in parallel, reporting objective and improvement
+# over the seed baseline.
+#
+# Sizes follow each problem's own test datasets. TSP/CVRP/OP/MKP all ship
+# 50/100/200/300/500. BPP-ACO ships 200/400/600/800/1000 only, so it uses those - no
+# dataset is generated here, to keep the protocol identical to the paper.
+#
+# Strategy counts also follow the repo's solver configs: TSP/CVRP/MKP evolve F1+F2+F3,
+# OP and BPP evolve F1+F2.
+
+on:
+  workflow_dispatch:
+    inputs:
+      problems:
+        description: "Problems to run (space separated)"
+        default: "tsp_aco cvrp_aco op_aco mkp_aco bpp_aco"
+      outer_iterations:
+        description: "MCTS outer iterations (tree selection)"
+        default: "20"
+      inner_iterations:
+        description: "Competitive turns per selected tree"
+        default: "10"
+      final_iterations:
+        description: "Final Round turns per strategy"
+        default: "10"
+      model:
+        description: "LLM model"
+        default: "gpt-4o-mini"
+      temperature:
+        description: "LLM temperature"
+        default: "1.0"
+
+permissions:
+  contents: read
+
+env:
+  PYTHON_VERSION: "3.12"
+
+jobs:
+  plan:
+    name: plan matrix
+    runs-on: ubuntu-latest
+    outputs:
+      train: ${{ steps.build.outputs.train }}
+      test: ${{ steps.build.outputs.test }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: build
+        name: Build train and test matrices
+        env:
+          PROBLEMS: ${{ inputs.problems }}
+        run: |
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import json, os
+
+          # size list per problem == the test datasets that problem actually ships
+          SIZES = {
+              "tsp_aco":  [50, 100, 200, 300, 500],
+              "cvrp_aco": [50, 100, 200, 300, 500],
+              "op_aco":   [50, 100, 200, 300, 500],
+              "mkp_aco":  [50, 100, 200, 300, 500],
+              "bpp_aco":  [200, 400, 600, 800, 1000],
+          }
+          # solver config name in cfg/solver/
+          SOLVER = {p: p for p in SIZES}
+
+          wanted = os.environ["PROBLEMS"].split()
+          unknown = [p for p in wanted if p not in SIZES]
+          if unknown:
+              raise SystemExit(f"unknown problems: {unknown}")
+
+          train = [{"problem": p, "solver": SOLVER[p]} for p in wanted]
+          test = [{"problem": p, "size": s} for p in wanted for s in SIZES[p]]
+          print("train=" + json.dumps({"include": train}))
+          print("test=" + json.dumps({"include": test}))
+          PY
+
+  train:
+    name: train ${{ matrix.problem }}
+    needs: plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.plan.outputs.train) }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run MOTIF
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          python main.py \
+            solver=${{ matrix.solver }} \
+            mcts.outer_iterations=${{ inputs.outer_iterations }} \
+            mcts.inner_iterations=${{ inputs.inner_iterations }} \
+            mcts.final_iterations=${{ inputs.final_iterations }} \
+            llm.model=${{ inputs.model }} \
+            llm.temperature=${{ inputs.temperature }} \
+            paths.results_dir=$GITHUB_WORKSPACE/results
+
+      - name: Check heuristics were produced
+        run: |
+          shopt -s nullglob
+          found=(results/F*_final_best.py)
+          if [ ${#found[@]} -eq 0 ]; then
+            echo "::error::no results/F*_final_best.py - the train stage produced no heuristics"
+            exit 1
+          fi
+          for f in "${found[@]}"; do echo "--- $f ---"; cat "$f"; done
+
+      - name: Upload heuristics
+        uses: actions/upload-artifact@v4
+        with:
+          name: rep_aco-heuristic-${{ matrix.problem }}
+          path: results/F*_final_best.py
+          if-no-files-found: error
+
+      - name: Upload search logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rep_aco-logs-${{ matrix.problem }}
+          path: results/*.json
+          if-no-files-found: warn
+
+  test:
+    name: test ${{ matrix.problem }} @ ${{ matrix.size }}
+    needs: [plan, train]
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.plan.outputs.test) }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      # Baseline first, while problems/ still holds the seed implementations.
+      - name: Evaluate seed baseline
+        run: |
+          python .github/scripts/rep_eval.py \
+            --problem ${{ matrix.problem }} \
+            --size ${{ matrix.size }} \
+            --label baseline \
+            --out results/${{ matrix.problem }}_${{ matrix.size }}_baseline.json
+
+      - name: Download heuristics
+        uses: actions/download-artifact@v4
+        with:
+          name: rep_aco-heuristic-${{ matrix.problem }}
+          path: heuristic
+
+      - name: Install heuristics into problems/${{ matrix.problem }}
+        run: |
+          for f in heuristic/F*_final_best.py; do
+            target="problems/${{ matrix.problem }}/$(basename "$f" | cut -d_ -f1).py"
+            cp "$f" "$target"
+            echo "--- $target ---"
+            cat "$target"
+          done
+
+      - name: Evaluate MOTIF heuristics
+        run: |
+          python .github/scripts/rep_eval.py \
+            --problem ${{ matrix.problem }} \
+            --size ${{ matrix.size }} \
+            --label motif \
+            --out results/${{ matrix.problem }}_${{ matrix.size }}_motif.json
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rep_aco-result-${{ matrix.problem }}-${{ matrix.size }}
+          path: results/${{ matrix.problem }}_${{ matrix.size }}_*.json
+          if-no-files-found: error
+
+  report:
+    name: report
+    needs: test
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Collect results
+        uses: actions/download-artifact@v4
+        with:
+          pattern: rep_aco-result-*
+          path: collected
+
+      - name: Improvement table
+        run: python .github/scripts/rep_report.py --mode improvement

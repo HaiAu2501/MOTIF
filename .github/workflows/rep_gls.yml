@@ -1,0 +1,161 @@
+name: rep_gls
+
+# Reproduce the GLS result: train the guide-matrix heuristic on TSP200, then test the
+# discovered heuristic on every size in parallel and report the gap to LKH-3.
+#
+# Train keeps the paper's solver budget (perturbation_moves=30, iter_limit=1200).
+# Test uses a larger budget (30, 3000), set below.
+
+on:
+  workflow_dispatch:
+    inputs:
+      outer_iterations:
+        description: "MCTS outer iterations (tree selection)"
+        default: "20"
+      inner_iterations:
+        description: "Competitive turns per selected tree"
+        default: "10"
+      final_iterations:
+        description: "Final Round turns per strategy"
+        default: "10"
+      model:
+        description: "LLM model"
+        default: "gpt-4o-mini"
+      temperature:
+        description: "LLM temperature"
+        default: "1.0"
+      test_iter_limit:
+        description: "GLS iter_limit at TEST time"
+        default: "3000"
+      test_perturbation_moves:
+        description: "GLS perturbation_moves at TEST time"
+        default: "30"
+
+permissions:
+  contents: read
+
+env:
+  PYTHON_VERSION: "3.12"
+
+jobs:
+  train:
+    name: train (tsp_gls)
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run MOTIF
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          python main.py \
+            solver=tsp_gls \
+            mcts.outer_iterations=${{ inputs.outer_iterations }} \
+            mcts.inner_iterations=${{ inputs.inner_iterations }} \
+            mcts.final_iterations=${{ inputs.final_iterations }} \
+            llm.model=${{ inputs.model }} \
+            llm.temperature=${{ inputs.temperature }} \
+            paths.results_dir=$GITHUB_WORKSPACE/results
+
+      - name: Check the heuristic was produced
+        run: |
+          test -f results/F1_final_best.py || {
+            echo "::error::results/F1_final_best.py missing - the train stage produced no heuristic"
+            exit 1
+          }
+          echo "--- discovered heuristic ---"
+          cat results/F1_final_best.py
+
+      - name: Upload heuristic
+        uses: actions/upload-artifact@v4
+        with:
+          name: rep_gls-heuristic
+          path: results/F*_final_best.py
+          if-no-files-found: error
+
+      - name: Upload search logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rep_gls-logs
+          path: results/*.json
+          if-no-files-found: warn
+
+  test:
+    name: test TSP${{ matrix.size }}
+    needs: train
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    strategy:
+      fail-fast: false
+      matrix:
+        size: [50, 100, 200, 500]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Download heuristic
+        uses: actions/download-artifact@v4
+        with:
+          name: rep_gls-heuristic
+          path: heuristic
+
+      - name: Install heuristic into problems/tsp_gls
+        run: |
+          cp heuristic/F1_final_best.py problems/tsp_gls/F1.py
+          echo "--- problems/tsp_gls/F1.py ---"
+          cat problems/tsp_gls/F1.py
+
+      - name: Evaluate TSP${{ matrix.size }}
+        run: |
+          python .github/scripts/rep_eval.py \
+            --problem tsp_gls \
+            --size ${{ matrix.size }} \
+            --label motif \
+            --moves ${{ inputs.test_perturbation_moves }} \
+            --iters ${{ inputs.test_iter_limit }} \
+            --out results/tsp_gls_${{ matrix.size }}.json
+
+      - name: Upload result
+        uses: actions/upload-artifact@v4
+        with:
+          name: rep_gls-result-${{ matrix.size }}
+          path: results/tsp_gls_${{ matrix.size }}.json
+          if-no-files-found: error
+
+  report:
+    name: report
+    needs: test
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Collect results
+        uses: actions/download-artifact@v4
+        with:
+          pattern: rep_gls-result-*
+          path: collected
+
+      - name: Optimality gap table
+        run: python .github/scripts/rep_report.py --mode gap
