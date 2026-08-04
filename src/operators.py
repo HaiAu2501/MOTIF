@@ -7,14 +7,19 @@ class Operators:
     AVAILABLE = ["counter", "learning", "innovation"]
     
     @staticmethod
-    def apply(operator: str, node, mcts, client, prompts, strategy_id, baseline_cost):
+    def apply(operator: str, node, mcts, client, prompts, strategy_id, baseline_cost,
+              seed_code: str = None):
         """
         Apply operator to generate new code for node.active_player.
         Uses node.active_player (NOT a global current_player).
+
+        seed_code overrides the node's stored code when that code is not viable.
         """
         active_player = node.active_player
-        current_impl = node.get_code(active_player)
-        
+        node_impl = node.get_code(active_player)
+        current_impl = seed_code if seed_code is not None else node_impl
+        repaired = current_impl != node_impl
+
         system_prompt = prompts.get(
             "SYSTEM_PROMPT",
             (
@@ -27,7 +32,7 @@ class Operators:
         
         context = Operators._build_context(
             node, mcts, baseline_cost, current_impl, operator, baseline_impl,
-            active_player, task_prompt
+            active_player, task_prompt, repaired
         )
 
         attempts = mcts.get_recent_attempts(1)
@@ -58,7 +63,8 @@ class Operators:
         return code, summary
     
     @staticmethod
-    def _build_context(node, mcts, baseline_cost, current_impl, operator_type, baseline_impl, active_player, task_prompt):
+    def _build_context(node, mcts, baseline_cost, current_impl, operator_type, baseline_impl,
+                       active_player, task_prompt, repaired=False):
         task_section = task_prompt
 
         baseline_section = f"""BASELINE IMPLEMENTATION:
@@ -69,7 +75,15 @@ class Operators:
         current_cost = node.get_cost(active_player)
         current_improvement = node.get_improvement(active_player)
         
-        if current_cost == float('inf') or current_cost is None:
+        if repaired:
+            # The node's own code was discarded as non-viable, so its cost does not
+            # describe the implementation shown below.
+            status_info = "RESTARTED - previous attempt was discarded as non-viable"
+            improvement_info = (
+                f"Improvement: {mcts.get_own_best_improvement(active_player):.2f}% "
+                f"(this player's best)"
+            )
+        elif current_cost == float('inf') or current_cost is None:
             status_info = "FAILED - Implementation has errors"
             improvement_info = f"Improvement: {current_improvement:.2f}% (failed)"
         else:
@@ -115,6 +129,16 @@ IMPLEMENTATION:
         feedback_section = f"""RECENT EVALUATOR FEEDBACK:
 {attempt_text}
 Avoid repeating failed or non-improving formula families."""
+
+        last_error = next((a.get("error") for a in reversed(attempts) if a.get("error")), "")
+        if last_error:
+            feedback_section += f"""
+
+EXECUTION ERROR from the most recent failing attempt:
+```
+{last_error}
+```
+Make sure your implementation does not reproduce this error."""
 
         contrast_section = ""
         if attempts:

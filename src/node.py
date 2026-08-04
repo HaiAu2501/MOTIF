@@ -25,6 +25,11 @@ class Node:
         self.p2_cost = None
         self.p1_improvement = 0.0
         self.p2_improvement = 0.0
+
+        # Viability: False once a player's code here failed or was catastrophically
+        # worse than the baseline. Non-viable code must not seed further expansions.
+        self.p1_viable = True
+        self.p2_viable = True
         
         # MCTS statistics - single W and n per node
         self.visits = 0
@@ -75,6 +80,15 @@ class Node:
             self.p1_improvement = improvement
         else:
             self.p2_improvement = improvement
+
+    def is_viable(self, player: str) -> bool:
+        return self.p1_viable if player == "P1" else self.p2_viable
+
+    def set_viable(self, player: str, viable: bool):
+        if player == "P1":
+            self.p1_viable = viable
+        else:
+            self.p2_viable = viable
 
     def get_path_summaries(self, max_depth: int = 3) -> list:
         """Get summaries from this node back to root, limited to max_depth."""

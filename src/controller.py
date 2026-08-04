@@ -327,8 +327,11 @@ class Controller:
                 break
             
             print(f"[UCB] Selected: {selected_strategy}")
-            
-            # 2. Run inner iterations
+
+            # 2. Run inner iterations, with exploration annealed over the global budget
+            remaining = 1.0 - iteration / max(1, self.outer_iterations)
+            for mcts in self.trees.values():
+                mcts.exploration_scale = remaining
             self._run_inner_iterations(selected_strategy, outer_iter)
             
             # 3. Check for improvement and update baseline

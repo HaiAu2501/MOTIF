@@ -6,7 +6,18 @@ from gls import run_tsp_gls
 
 
 PERTURBATION_MOVES = 30
+
+# 1200 / 30 on 10 TSP200 instances is the protocol MCTS-AHD uses, so it is the
+# default here and must stay that way for reported comparisons.
+#
+# Diagnostic option, off by default: at 1200 iterations GLS has converged far enough
+# that the entire reachable span of guide matrices is about 0.16% on the train set,
+# i.e. below train/test noise, so nothing can be learned. Setting
+# MOTIF_GLS_TRAIN_ITERS=300 weakens the solver during search to expose that signal.
+# Any value other than 1200 makes the run NOT comparable with ReEvo / MCTS-AHD.
 ITER_LIMIT = 1200
+TRAIN_ITER_LIMIT = int(os.environ.get("MOTIF_GLS_TRAIN_ITERS", ITER_LIMIT))
+
 DATASET_SIZES = {
     "train": [200],
     "test": [20, 50, 100, 200, 500],
@@ -50,7 +61,8 @@ def main(mode: str = "train"):
         if not os.path.exists(path):
             print(f"Warning: Dataset file {path} not found. Skipping.")
             continue
-        costs = process_file(path, PERTURBATION_MOVES, ITER_LIMIT)
+        iter_limit = TRAIN_ITER_LIMIT if mode == "train" else ITER_LIMIT
+        costs = process_file(path, PERTURBATION_MOVES, iter_limit)
         all_costs.extend(costs.tolist())
 
     print(float(np.mean(all_costs)) if all_costs else float('inf'))

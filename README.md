@@ -27,7 +27,8 @@
 ---
 
 > [!CAUTION]
-> We discovered that some recent commits unintentionally changed the MOTIF algorithm in an uncontrolled way compared with the original paper, which has caused performance issues. We are working to fix this quickly and restore the best version of MOTIF. Thank you to the community for bringing this to our attention, and we apologize for the inconvenience.
+> We discovered that, during a recent refactoring and prompt optimization effort, we unintentionally altered several core components of the MOTIF algorithm. As a result, the current implementation no longer faithfully matches the original method described in the paper, leading to degraded performance. **We are working to fix this quickly and restore the implementation to the best-performing version of MOTIF. Thank you to the community for bringing this to our attention, and we apologize for the inconvenience.**
+
 
 ---
 
@@ -152,7 +153,6 @@ problems/
 ```yaml
 # @package _global_.solver
 base_path: ${paths.problems_dir}/problem_solver # Path to problem-solver directory
-
 functions: [F1, F2] # Strategy files to optimize
 ```
 
