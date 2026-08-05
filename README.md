@@ -160,7 +160,7 @@ The repository provides GitHub Actions workflows for reproducing the main experi
 - **`rep_dr.yml`**: Reproduce the DR experiments
 - **`rep_gls.yml`**: Reproduce the GLS experiment
 
-> [NOTE!]
+> [!NOTE]
 > Because MOTIF uses LLM sampling and stochastic search, individual runs may produce different heuristics and scores. 
 
 - Recent runs and their logs are available in the repository's [Releases](https://github.com/HaiAu2501/MOTIF/releases).
