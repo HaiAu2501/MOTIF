@@ -18,17 +18,12 @@
 
 | Date | Update |
 |:----:|:-------|
+| 🔧 **Aug. 2026** | Bug fixes and repository maintenance |
 | 🎉 **Dec. 2025** | Refactored codebase for better modularity and extensibility |
 | 🏆 **Nov. 2025** | Paper accepted for **oral presentation** at AAAI 2026! |
 | 🚀 **Aug. 2025** | Released first version of MOTIF |
 
 </div>
-
----
-
-> [!CAUTION]
-> We discovered that, during a recent refactoring and prompt optimization effort, we unintentionally altered several core components of the MOTIF algorithm. As a result, the current implementation no longer faithfully matches the original method described in the paper, leading to degraded performance. **We are working to fix this quickly and restore the implementation to the best-performing version of MOTIF. Thank you to the community for bringing this to our attention, and we apologize for the inconvenience.**
-
 
 ---
 
@@ -125,27 +120,26 @@ Results are saved to `./results/`:
 
 ## 🔧 5. Customization and Extension
 
-MOTIF is designed for easy extension. Follow these guides to add new problems and solvers.
+MOTIF is designed to be easily extended. Follow the steps below to add new problems and solvers.
 
 ### Step 1. Create the problem directory:
 
 ```
 problems/
 └── problem_solver/
-    ├── __init__.py
-	├── solver.py        # Solver implementation
-	├── eval.py          # Evaluation functions
-	├── generator.py     # Instance generator
-	├── prompts.py       # LLM prompts for each strategy
-	├── F1.py            # Strategy component 1 (baseline)
-	├── F2.py            # Strategy component 2 (baseline)
-	├── F3.py            # Strategy component 3 (baseline)
-	└── datasets/        # Training and test datasets
+    ├── solver.py        # Solver implementation
+    ├── eval.py          # Evaluation functions
+    ├── generator.py     # Instance generator
+    ├── prompts.py       # LLM prompts for each strategy
+    ├── F1.py            # Strategy component 1 (baseline)
+    ├── F2.py            # Strategy component 2 (baseline)
+    ├── F3.py            # Strategy component 3 (baseline)
+    └── datasets/        # Training and test datasets
 ```
 
 ### Step 2. Implement core files:
 
-- **`prompts.py`**: Define `PROBLEM_DESCRIPTION`, `CONSTRAINTS`, and strategy prompts (`F1`, `F2`, `F3`)
+- **`prompts.py`**: Define `SYSTEM_PROMPT`, `PROBLEM`, `RULES`, and strategy prompts (`F1`, `F2`, `F3`)
 - **`F*.py`**: Provide baseline implementations for each strategy component
 
 ### Step 3. Create solver configuration:
@@ -158,7 +152,25 @@ functions: [F1, F2] # Strategy files to optimize
 
 ---
 
-## 📚 6. Citation
+## 🧪 6. Reproducibility
+
+The repository provides GitHub Actions workflows for reproducing the main experiments:
+
+- **`rep_aco.yml`**: Reproduce the ACO experiments
+- **`rep_dr.yml`**: Reproduce the DR experiments
+- **`rep_gls.yml`**: Reproduce the GLS experiment
+
+> [NOTE!]
+> Because MOTIF uses LLM sampling and stochastic search, individual runs may produce different heuristics and scores. 
+
+- Recent runs and their logs are available in the repository's [Releases](https://github.com/HaiAu2501/MOTIF/releases).
+- Compare the reported results with those in the paper to verify that performance is not degraded.
+- Result tables are generated automatically by the GitHub Actions workflows. Workflow logs may expire after 90 days, but the reported result tables remain available in the corresponding releases.
+- These independently reproduced results provide an additional check on the reproducibility of MOTIF.
+
+---
+
+## 📚 7. Citation
 
 If you find MOTIF useful in your research, please consider citing our paper:
 
