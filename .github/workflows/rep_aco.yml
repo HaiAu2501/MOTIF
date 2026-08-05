@@ -200,6 +200,8 @@ jobs:
     needs: test
     if: always()
     runs-on: ubuntu-latest
+    permissions:
+      contents: write   # only this job writes, and only to the reports branch
     steps:
       - uses: actions/checkout@v4
 
@@ -211,7 +213,46 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           pattern: rep_aco-result-*
-          path: collected
+          path: publish/results
 
-      - name: Improvement table
-        run: python .github/scripts/rep_report.py --mode improvement
+      - name: Collect heuristics
+        uses: actions/download-artifact@v4
+        with:
+          pattern: rep_aco-heuristic-*
+          path: publish/heuristics
+
+      - name: Collect search logs
+        uses: actions/download-artifact@v4
+        with:
+          pattern: rep_aco-logs-*
+          path: publish/logs
+        continue-on-error: true
+
+      - name: Build report
+        run: |
+          python .github/scripts/rep_report.py \
+            --mode improvement \
+            --glob "publish/results/**/*.json" \
+            --heuristics publish/heuristics \
+            --title "_rep_aco · run [${{ github.run_id }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) · commit \`${{ github.sha }}\`_" \
+            --out publish/report.md
+
+      - name: Bundle logs
+        run: |
+          mkdir -p assets
+          cp publish/report.md assets/
+          if [ -d publish/logs ] && [ -n "$(ls -A publish/logs 2>/dev/null)" ]; then
+            zip -qr assets/rep_aco-logs.zip publish/logs publish/results publish/heuristics
+          else
+            zip -qr assets/rep_aco-logs.zip publish/results publish/heuristics
+          fi
+          ls -la assets
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "rep_aco-${{ github.run_id }}" \
+            --title "rep_aco · run ${{ github.run_id }}" \
+            --notes-file publish/report.md \
+            assets/*

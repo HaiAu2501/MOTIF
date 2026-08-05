@@ -1,4 +1,5 @@
-"""Collect the per-size JSON records into one markdown table.
+"""Build the single reproduction report: the results table plus the discovered
+heuristics inlined as fenced code blocks.
 
 Two modes:
   --mode gap          compare against hard-coded LKH reference values (tsp_gls)
@@ -8,6 +9,7 @@ import argparse
 import glob
 import json
 import os
+import re
 
 # LKH-3 (via elkai) on problems/tsp_gls/datasets/test_TSP{size}.npy, 64 instances each.
 # TSP50 used runs=200 and matches the best tour GLS itself finds, so it is optimal;
@@ -29,12 +31,16 @@ def load(pattern):
     return out
 
 
-def emit(lines):
+def emit(lines, out=None):
     text = "\n".join(lines)
     print(text)
     summary = os.environ.get("GITHUB_STEP_SUMMARY")
     if summary:
         with open(summary, "a", encoding="utf-8") as f:
+            f.write(text + "\n")
+    if out:
+        os.makedirs(os.path.dirname(os.path.abspath(out)), exist_ok=True)
+        with open(out, "w", encoding="utf-8") as f:
             f.write(text + "\n")
 
 
@@ -80,18 +86,62 @@ def mode_improvement(records):
     return lines
 
 
+def heuristic_sections(root):
+    """Inline every discovered F*.py as a fenced code block, grouped by problem.
+
+    Artifacts land either flat (single-problem workflow) or one directory per
+    downloaded artifact named `<workflow>-heuristic-<problem>`.
+    """
+    files = sorted(glob.glob(os.path.join(root, "**", "F*_final_best.py"), recursive=True))
+    if not files:
+        return ["", "## Discovered heuristics", "", "_none found_"]
+
+    by_problem = {}
+    for path in files:
+        parent = os.path.basename(os.path.dirname(path))
+        m = re.search(r"heuristic-(.+)$", parent)
+        problem = m.group(1) if m else ""
+        by_problem.setdefault(problem, []).append(path)
+
+    lines = ["", "## Discovered heuristics"]
+    for problem in sorted(by_problem):
+        if problem:
+            lines += ["", f"### {problem}"]
+        for path in sorted(by_problem[problem]):
+            strategy = os.path.basename(path).split("_")[0]
+            with open(path, encoding="utf-8") as f:
+                # drop the provenance header MOTIF writes, it is repeated in the table
+                code = "\n".join(
+                    ln for ln in f.read().splitlines()
+                    if not ln.startswith(("# Final Round optimized", "# Strategy ID:", "# Phase:"))
+                ).strip()
+            lines += ["", f"**{strategy}**", "", "```python", code, "```"]
+    return lines
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--mode", required=True, choices=["gap", "improvement"])
+    ap.add_argument("--heuristics", help="directory holding the F*_final_best.py artifacts")
     ap.add_argument("--glob", default="collected/**/*.json")
+    ap.add_argument("--out", help="also write the markdown here, for archiving")
+    ap.add_argument("--title", default="", help="line prepended to the report")
     args = ap.parse_args()
 
     records = load(args.glob)
-    if not records:
-        emit([f"No result files matched `{args.glob}`."])
-        raise SystemExit(1)
+    missing = not records
+    lines = ([f"No result files matched `{args.glob}`."] if missing
+             else mode_gap(records) if args.mode == "gap"
+             else mode_improvement(records))
 
-    emit(mode_gap(records) if args.mode == "gap" else mode_improvement(records))
+    if args.heuristics:
+        lines += heuristic_sections(args.heuristics)
+    if args.title:
+        lines = [args.title, ""] + lines
+
+    emit(lines, args.out)
+    if missing:
+        raise SystemExit(1)
 
 
 if __name__ == "__main__":
