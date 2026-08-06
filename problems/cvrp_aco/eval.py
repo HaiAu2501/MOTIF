@@ -6,6 +6,8 @@ from aco import run_cvrp_aco
 
 N_ANTS = 30
 N_ITERATIONS = 100
+# Test keeps the training settings and only doubles the iteration count.
+N_ITERATIONS_TEST = 200
 CAPACITY = 50
 
 def eval_instance(coords, demands, capacity, n_ants, n_iter, seed):
@@ -83,13 +85,15 @@ def main(mode="train"):
     else:
         raise ValueError("Invalid mode. Choose 'train' or 'test'.")
     
+    n_iter = N_ITERATIONS_TEST if mode == "test" else N_ITERATIONS
+
     total_cost = 0
     for path in paths:
         if not os.path.exists(path):
             print(f"Warning: File {path} not found. Skipping.")
             continue
 
-        costs = process_file(path, n_ants=N_ANTS, n_iter=N_ITERATIONS)
+        costs = process_file(path, n_ants=N_ANTS, n_iter=n_iter)
         total_cost += costs.sum()
     
     print(total_cost)

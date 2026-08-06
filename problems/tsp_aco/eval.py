@@ -32,10 +32,10 @@ def main(mode):
         raise ValueError("Invalid mode. Choose 'train' or 'test'.")
 
     if mode == "test":
-        N_ANTS = 50
+        N_ANTS = 30
         N_ITER = 200
     else:
-        N_ANTS = 50
+        N_ANTS = 30
         N_ITER = 100
 
     total = 0

@@ -107,7 +107,7 @@ jobs:
             mcts.final_iterations=${{ inputs.final_iterations }} \
             llm.model=${{ inputs.model }} \
             llm.temperature=${{ inputs.temperature }} \
-            paths.results_dir=$GITHUB_WORKSPACE/results
+            paths.results_dir="$GITHUB_WORKSPACE/results"
 
       - name: Check all three heuristics were produced
         run: |
@@ -200,7 +200,7 @@ jobs:
     if: always()
     runs-on: ubuntu-latest
     permissions:
-      contents: write   # only this job writes, and only to the reports branch
+      contents: write   # only this job writes, and only to create the release
     steps:
       - uses: actions/checkout@v4
 

@@ -161,7 +161,7 @@ The repository provides GitHub Actions workflows for reproducing the main experi
 - **`rep_gls.yml`**: Reproduce the GLS experiment
 
 > [!NOTE]
-> Because MOTIF uses LLM sampling and stochastic search, individual runs may produce different heuristics and scores. 
+> Because MOTIF uses LLM sampling and stochastic search, individual runs may produce different heuristics and scores.  
 
 - Recent runs and their logs are available in the repository's [Releases](https://github.com/HaiAu2501/MOTIF/releases).
 - Compare the reported results with those in the paper to verify that performance is not degraded.

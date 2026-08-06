@@ -19,19 +19,35 @@ import time
 
 import numpy as np
 
-# pattern: test dataset filename; kwargs: what this problem's process_file expects
+# `train` holds the settings MOTIF searches under, taken from each problem's eval.py.
+# Test keeps those settings unchanged and only scales the iteration count, by
+# --iter-multiplier (default 2). `scale` names the key to multiply; None means the
+# solver has no iteration parameter at all.
+#
+# tsp_aco is the one problem whose eval.py already encodes this (100 -> 200, ant count
+# unchanged), so the default multiplier reproduces it exactly. The other ACO problems
+# reuse their train constants for test in eval.py, and are scaled here instead.
+#
+# The DR solvers take destruction_rate / use_2opt / max_workers / seed and nothing else:
+# each run does one deconstruct-repair pass per starting item, and the number of starting
+# items is fixed by the instance size. There is no iteration count to scale.
 CONFIG = {
-    "tsp_aco":  dict(pattern="test_TSP{size}.npy",  kwargs=dict(n_ants=50, n_iter=200), maximize=False),
-    "cvrp_aco": dict(pattern="test_CVRP{size}.npy", kwargs=dict(n_ants=30, n_iter=100), maximize=False),
-    "op_aco":   dict(pattern="test_OP{size}.npz",   kwargs=dict(n_ants=20, n_iter=100), maximize=True),
-    "mkp_aco":  dict(pattern="test_MKP{size}.npz",  kwargs=dict(n_ants=10, n_iter=50),  maximize=True),
-    "bpp_aco":  dict(pattern="test_BPP{size}.npz",  kwargs=dict(n_ants=20, n_iter=50),  maximize=False),
-    "tsp_gls":  dict(pattern="test_TSP{size}.npy",
-                     kwargs=dict(perturbation_moves=30, iter_limit=3000), maximize=False),
-    "tsp_dr":   dict(pattern="test_TSP{size}.npy",  kwargs={}, maximize=False),
-    "cvrp_dr":  dict(pattern="test_CVRP{size}.npy", kwargs={}, maximize=False),
-    "bpp_dr":   dict(pattern="test_BPP{size}.npz",
-                     kwargs=dict(max_workers=20, destruction_rate=0.3), maximize=False),
+    "tsp_aco":  dict(pattern="test_TSP{size}.npy",  maximize=False, scale="n_iter",
+                     train=dict(n_ants=30, n_iter=100)),
+    "cvrp_aco": dict(pattern="test_CVRP{size}.npy", maximize=False, scale="n_iter",
+                     train=dict(n_ants=30, n_iter=100)),
+    "op_aco":   dict(pattern="test_OP{size}.npz",   maximize=True,  scale="n_iter",
+                     train=dict(n_ants=20, n_iter=100)),
+    "mkp_aco":  dict(pattern="test_MKP{size}.npz",  maximize=True,  scale="n_iter",
+                     train=dict(n_ants=10, n_iter=50)),
+    "bpp_aco":  dict(pattern="test_BPP{size}.npz",  maximize=False, scale="n_iter",
+                     train=dict(n_ants=20, n_iter=50)),
+    "tsp_gls":  dict(pattern="test_TSP{size}.npy",  maximize=False, scale="iter_limit",
+                     train=dict(perturbation_moves=30, iter_limit=1200)),
+    "tsp_dr":   dict(pattern="test_TSP{size}.npy",  maximize=False, scale=None, train={}),
+    "cvrp_dr":  dict(pattern="test_CVRP{size}.npy", maximize=False, scale=None, train={}),
+    "bpp_dr":   dict(pattern="test_BPP{size}.npz",  maximize=False, scale=None,
+                     train=dict(max_workers=20, destruction_rate=0.3)),
 }
 
 
@@ -55,7 +71,10 @@ def main():
     ap.add_argument("--size", required=True, type=int)
     ap.add_argument("--repo-root", default=os.getcwd())
     ap.add_argument("--label", default="run")
-    # tsp_gls only: the paper trains at (30, 1200) and we test at a larger budget
+    ap.add_argument("--iter-multiplier", type=float, default=2.0,
+                    help="test iterations = train iterations x this (ignored when the "
+                         "solver has no iteration parameter)")
+    # explicit overrides, used by rep_gls where the test budget is stated outright
     ap.add_argument("--moves", type=int)
     ap.add_argument("--iters", type=int)
     ap.add_argument("--out")
@@ -68,11 +87,16 @@ def main():
     if not os.path.exists(dataset):
         raise SystemExit(f"[rep_eval] dataset not found: {dataset}")
 
-    kwargs = dict(cfg["kwargs"])
+    # same settings as training, iterations scaled
+    kwargs = dict(cfg["train"])
+    scale_key = cfg["scale"]
+    if scale_key:
+        kwargs[scale_key] = int(round(kwargs[scale_key] * args.iter_multiplier))
+
     if args.moves is not None and "perturbation_moves" in kwargs:
         kwargs["perturbation_moves"] = args.moves
-    if args.iters is not None and "iter_limit" in kwargs:
-        kwargs["iter_limit"] = args.iters
+    if args.iters is not None and scale_key:
+        kwargs[scale_key] = args.iters
 
     os.chdir(problem_dir)
     sys.path.insert(0, problem_dir)
@@ -91,6 +115,7 @@ def main():
         "better": "higher" if cfg["maximize"] else "lower",
         "n_instances": int(values.size),
         "seconds": round(elapsed, 1),
+        "train_params": cfg["train"],
         "params": kwargs,
     }
 

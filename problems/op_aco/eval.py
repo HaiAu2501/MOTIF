@@ -173,8 +173,9 @@ def main(mode="train"):
         print("Datasets not found.")
     
     N_ANTS = 20
-    N_ITER = 100
-    
+    # Test keeps the training settings and only doubles the iteration count.
+    N_ITER = 200 if mode == "test" else 100
+
     if mode == "train":
         problem_sizes = [50]
     elif mode == "test":

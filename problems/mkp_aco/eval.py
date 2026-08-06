@@ -27,8 +27,9 @@ def main(mode="train"):
     current_dir = os.path.dirname(os.path.abspath(__file__))
     
     N_ANTS = 10
-    N_ITER = 50
-    
+    # Test keeps the training settings and only doubles the iteration count.
+    N_ITER = 100 if mode == "test" else 50
+
     if mode == "train":
         problem_sizes = [100]
     elif mode == "test":

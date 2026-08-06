@@ -83,6 +83,20 @@ def mode_improvement(records):
         impr = (m - b) / abs(b) * 100 if motif["better"] == "higher" else (b - m) / abs(b) * 100
         lines.append(f"| {problem} | {size} | {b:.6f} | {m:.6f} | {impr:+.2f}% | "
                      f"{motif['better']} | {motif['seconds']} |")
+
+    lines += ["", "### Solver settings", "",
+              "Test keeps the training settings and scales only the iteration count.", "",
+              "| problem | train | test |", "|---|---|---|"]
+    seen = set()
+    for (problem, _size), got in sorted(pairs.items()):
+        rec = got.get("motif") or got.get("baseline")
+        if problem in seen or not rec:
+            continue
+        seen.add(problem)
+        train = rec.get("train_params") or {}
+        test = rec.get("params") or {}
+        same = "same (no iteration parameter)" if train == test else f"`{test}`"
+        lines.append(f"| {problem} | `{train}` | {same} |")
     return lines
 
 

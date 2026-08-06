@@ -32,6 +32,9 @@ on:
       temperature:
         description: "LLM temperature"
         default: "1.0"
+      test_iter_multiplier:
+        description: "Test iterations = train iterations x this (ants unchanged)"
+        default: "2"
 
 permissions:
   contents: read
@@ -109,7 +112,7 @@ jobs:
             mcts.final_iterations=${{ inputs.final_iterations }} \
             llm.model=${{ inputs.model }} \
             llm.temperature=${{ inputs.temperature }} \
-            paths.results_dir=$GITHUB_WORKSPACE/results
+            paths.results_dir="$GITHUB_WORKSPACE/results"
 
       - name: Check heuristics were produced
         run: |
@@ -162,6 +165,7 @@ jobs:
             --problem ${{ matrix.problem }} \
             --size ${{ matrix.size }} \
             --label baseline \
+            --iter-multiplier ${{ inputs.test_iter_multiplier }} \
             --out results/${{ matrix.problem }}_${{ matrix.size }}_baseline.json
 
       - name: Download heuristics
@@ -185,6 +189,7 @@ jobs:
             --problem ${{ matrix.problem }} \
             --size ${{ matrix.size }} \
             --label motif \
+            --iter-multiplier ${{ inputs.test_iter_multiplier }} \
             --out results/${{ matrix.problem }}_${{ matrix.size }}_motif.json
 
       - name: Upload results
@@ -201,7 +206,7 @@ jobs:
     if: always()
     runs-on: ubuntu-latest
     permissions:
-      contents: write   # only this job writes, and only to the reports branch
+      contents: write   # only this job writes, and only to create the release
     steps:
       - uses: actions/checkout@v4
 
