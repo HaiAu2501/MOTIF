@@ -161,7 +161,7 @@ The repository provides GitHub Actions workflows for reproducing the main experi
 - **`rep_gls.yml`**: Reproduce the GLS experiment
 
 > [!NOTE]
-> Because MOTIF uses LLM sampling and stochastic search, individual runs may produce different heuristics and scores.  
+> Because MOTIF relies on LLM sampling and search, performance naturally exhibits high run-to-run variance. This is an inherent property of LLM-driven AHD methods arising from the stochastic optimization process, rather than an indication that MOTIF is unstable or weak. Moreover, some runs may overfit because the search procedure optimizes heuristics using only a small training set.
 
 - Recent runs and their logs are available in the repository's [Releases](https://github.com/HaiAu2501/MOTIF/releases).
 - Compare the reported results with those in the paper to verify that performance is not degraded.
