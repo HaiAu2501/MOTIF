@@ -34,7 +34,7 @@ def initialize(distances, demands, coords, capacity):
 - `heuristic`: returned transition desirability prior.
 - `pheromone`: returned initial search memory.
 
-HINT: Try formulas that mix distance, demand size, depot proximity, capacity pressure, and customer clustering. The heuristic should favor transitions that form compact feasible routes, while pheromone should begin broad enough to explore route structures.
+HINT: Score each transition by how much it helps build short, compact routes. Start pheromone uniform.
 
 {RULES}
 """
@@ -55,7 +55,7 @@ def compute_probabilities(pheromone, heuristic, iteration, n_iterations):
 - `n_iterations`: total search iterations.
 - `return`: transition weights.
 
-HINT: Try alpha/beta schedules, rank transforms, or temperature-like formulas that rebalance pheromone memory and route desirability over iterations. Preserve enough exploration for capacity-feasible alternatives instead of only following the strongest edge.
+HINT: Combine pheromone and heuristic so promising transitions dominate later without collapsing early.
 
 {RULES}
 """
@@ -77,7 +77,7 @@ def update_pheromone(pheromone, solutions, costs, iteration, n_iterations):
 - `n_iterations`: total search iterations.
 - `return`: updated pheromone matrix.
 
-HINT: Try reinforcement formulas using route cost rank, elite solutions, depot transitions, customer adjacency, or relative savings. Update pheromone so low-cost feasible route segments become more likely without letting a few edges dominate permanently.
+HINT: Reward transitions used by cheap solutions, and evaporate so old choices fade.
 
 {RULES}
 """
