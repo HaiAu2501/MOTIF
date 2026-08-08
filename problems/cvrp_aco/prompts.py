@@ -71,8 +71,12 @@ def update_pheromone(pheromone, solutions, costs, iteration, n_iterations):
     pass
 ```
 - `pheromone`: current transition memory.
-- `solutions`: routes constructed by ants.
-- `costs`: route cost for each solution.
+- `solutions`: a Python list of one solution per ant. Each solution is a list of routes,
+  and each route is a list of node indices starting and ending at the depot 0. Ants have
+  different numbers of routes and routes have different lengths, so `solutions` is ragged
+  and cannot be converted to a rectangular array or indexed with numpy fancy indexing
+  across ants or routes. Iterate over it with plain Python loops.
+- `costs`: a Python list of one float per ant, the total cost of that ant's solution.
 - `iteration`: current search iteration.
 - `n_iterations`: total search iterations.
 - `return`: updated pheromone matrix.
